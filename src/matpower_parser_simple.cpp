@@ -38,7 +38,7 @@ struct matpower_grammar
             using ascii::char_;
 
             varname_ %= lexeme[char_("a-zA-Z_") >> *char_("a-zA-Z0-9_")];
-            matrix_ %= lexeme[double_ % ',' % ';'];
+            matrix_ %= lexeme[double_ % ' ' % ';'];
             start_ %=
                 lit("mpc") 
                 >> '.' 
@@ -47,6 +47,7 @@ struct matpower_grammar
                 >> '[' 
                 >> matrix_
                 >> ']'
+                >> ';'
                 ;
         }
         qi::rule<Iterator, Mat(), ascii::space_type> matrix_; 
@@ -60,9 +61,9 @@ int main() {
     typedef std::string::const_iterator StringIt;
     using boost::spirit::ascii::space;
 
-    //std::string test_var = "mpc.gencosts=[1 2 3;4 5 6]";
-    std::string test_var = "mpc.gencosts=[1,2,3;4,5,6]";
-    //std::string test_var = "mpc.gencosts=[1.0 2.0 3.343;4.454 5.4 6.43];";
+    //std::string test_var = "mpc.gencosts=[1 2 3;4 5 6];";
+    //std::string test_var = "mpc.gencosts=[1,2,3;4,5,6];";
+    std::string test_var = "mpc.gencosts=[1.0 2.0 3.343;4.454 5.4 6.43];";
 
     StringIt iter = test_var.begin();
     StringIt end = test_var.end();
@@ -76,7 +77,7 @@ int main() {
     {
         std::cout << "Parse successful!" << std::endl;
         
-        std::cout << "Parsed: variabled named '" << boost::fusion::at_c<0>(mpc_data) << "' [";
+        std::cout << "Parsed variable name: '" << boost::fusion::at_c<0>(mpc_data) << "' [";
 
         for(auto& row : boost::fusion::at_c<1>(mpc_data))
             std::copy(row.begin(), row.end(), std::ostream_iterator<double>(std::cout<<"\n\t",", "));
