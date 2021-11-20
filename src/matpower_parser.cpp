@@ -14,12 +14,12 @@ using It  = boost::spirit::istream_iterator;
 using Row = std::vector<double>;
 using Mat = std::vector<Row>;
 
+namespace qi = boost::spirit::qi;
+namespace ascii = boost::spirit::ascii;
+namespace fusion = boost::fusion;
 
 namespace matpower{
 
-    namespace qi = boost::spirit::qi;
-    namespace ascii = boost::spirit::ascii;
-    namespace fusion = boost::fusion;
 
     struct mpc_matrix{
         std::string name;
@@ -37,29 +37,29 @@ BOOST_FUSION_ADAPT_STRUCT(
 
 namespace matpower {
 
-    /*
+    
     template <typename Iterator>
-    struct skipper : qi::grammar<Iterator>
+    struct skip_grammar : qi::grammar<Iterator>
     {
-        skipper() : skipper::base_type(skipper_)
+        skip_grammar() : skip_grammar::base_type(skipper_)
         {
             using ascii::char_;
+            using ascii::space;
             using qi::eol;
             using qi::eoi;
-            using ascii::space;
 
             // Skip single line comments -- assume no block statements
-            single_line_comment_ = '%' >> *(char_ - eol) >> (eol|eoi);
+            single_line_comment_ = "%" >> *(char_ - eol) >> (eol|eoi);
             skipper_ = space | single_line_comment_;
 
         }
         qi::rule<Iterator> single_line_comment_, skipper_;
         
     };
-    */
+    
 
-    template <typename Iterator>
-    struct matpower_grammar : qi::grammar<Iterator, mpc_matrix(), ascii::space_type>
+    template <typename Iterator, typename Skipper = skip_grammar<Iterator>>
+    struct matpower_grammar : qi::grammar<Iterator, mpc_matrix(), Skipper>
     {
         matpower_grammar() : matpower_grammar::base_type(mpc_)
         {
@@ -69,7 +69,6 @@ namespace matpower {
             using qi::lexeme;
             using ascii::char_;
             using ascii::space;
-
 
             mpc_var_name_ %= lexeme[char_("a-zA-Z_") >> *char_("a-zA-Z0-9_")];
             matrix_ %=  lexeme[double_ % *space % double_ >>';'];
@@ -86,9 +85,9 @@ namespace matpower {
                 ;
 
         }
-        qi::rule<Iterator, std::string(), ascii::space_type> mpc_var_name_;
-        qi::rule<Iterator, Mat(), ascii::space_type> matrix_;
-        qi::rule<Iterator, matpower::mpc_matrix(), ascii::space_type> mpc_;
+        qi::rule<Iterator, std::string(), Skipper> mpc_var_name_;
+        qi::rule<Iterator, Mat(), Skipper> matrix_;
+        qi::rule<Iterator, matpower::mpc_matrix(), Skipper> mpc_;
 
     };
 
@@ -146,9 +145,10 @@ int main(int argc, char **argv)
 
     matpower::mpc_matrix mpc_data;
     matpower::matpower_grammar<StringIt> mpg;
+    matpower::skip_grammar<StringIt> skipper;
 
     
-    bool r = phrase_parse(iter, end, mpg, space, mpc_data);
+    bool r = phrase_parse(iter, end, mpg, skipper, mpc_data);
 
     if (r && iter == end)
     {
