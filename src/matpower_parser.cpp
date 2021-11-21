@@ -3,6 +3,7 @@
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
 #include <boost/spirit/include/phoenix_object.hpp>
+#include <boost/spirit/include/qi_repeat.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/fusion/include/io.hpp>
 
@@ -16,6 +17,7 @@ using Mat = std::vector<Row>;
 
 namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
+namespace spirit = boost::spirit;
 namespace fusion = boost::fusion;
 
 namespace matpower{
@@ -59,14 +61,16 @@ namespace matpower {
     
 
     template <typename Iterator, typename Skipper = skip_grammar<Iterator>>
-    struct matpower_grammar : qi::grammar<Iterator, mpc_matrix(), Skipper>
+    struct matpower_grammar : qi::grammar<Iterator, std::vector<mpc_matrix>(), Skipper>
     {
-        matpower_grammar() : matpower_grammar::base_type(mpc_)
+        matpower_grammar() : matpower_grammar::base_type(mpc_data_)
         {
 
             using qi::lit;
             using qi::double_;
             using qi::lexeme;
+            using spirit::repeat;
+            using spirit::inf;
             using ascii::char_;
             using ascii::space;
 
@@ -84,10 +88,13 @@ namespace matpower {
                 >> ';'
                 ;
 
+            mpc_data_ %= repeat(0,inf)[mpc_];
+
         }
         qi::rule<Iterator, std::string(), Skipper> mpc_var_name_;
         qi::rule<Iterator, Mat(), Skipper> matrix_;
-        qi::rule<Iterator, matpower::mpc_matrix(), Skipper> mpc_;
+        qi::rule<Iterator, mpc_matrix(), Skipper> mpc_;
+        qi::rule<Iterator, std::vector<mpc_matrix>(), Skipper> mpc_data_;
 
     };
 
@@ -143,22 +150,24 @@ int main(int argc, char **argv)
     StringIt iter = case_storage.begin();
     StringIt end = case_storage.end();
 
-    matpower::mpc_matrix mpc_data;
+    std::vector<matpower::mpc_matrix> mpc_data;
     matpower::matpower_grammar<StringIt> mpg;
     matpower::skip_grammar<StringIt> skipper;
 
-    
     bool r = phrase_parse(iter, end, mpg, skipper, mpc_data);
 
     if (r && iter == end)
     {
         std::cout << "Parse successful!" << std::endl;
         
-        std::cout << "Parsed variable name: '" << boost::fusion::at_c<0>(mpc_data) << "' [";
+        for(auto& v : mpc_data)
+        {
+            std::cout << "Parsed variable name: '" << boost::fusion::at_c<0>(v) << "' [";
 
-        for(auto& row : boost::fusion::at_c<1>(mpc_data))
-            std::copy(row.begin(), row.end(), std::ostream_iterator<double>(std::cout<<"\n\t",", "));
-        std::cout << "\n]\n";
+            for(auto& row : boost::fusion::at_c<1>(v))
+                std::copy(row.begin(), row.end(), std::ostream_iterator<double>(std::cout<<"\n\t",", "));
+            std::cout << "\n]\n";
+        }
     } else {
         std::cout << "Parse failed\n";
     }
