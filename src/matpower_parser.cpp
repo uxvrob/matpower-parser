@@ -28,6 +28,16 @@ namespace matpower{
         Mat matrix;
     };
 
+    struct mpc_baseMVA{
+        std::string name;
+        double baseMVA;
+    };
+
+    struct mpc_version{
+        std::string name;
+        std::string version;
+    };
+
 
 } //matpower
 
@@ -37,6 +47,19 @@ BOOST_FUSION_ADAPT_STRUCT(
     (Mat, matrix)
 )
 
+/*
+BOOST_FUSION_ADAPT_STRUCT(
+    matpower::mpc_baseMVA,
+    (std::string, name)
+    (double, baseMVA)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    matpower::mpc_version,
+    (std::string, name)
+    (std::string, version)
+)
+*/
 namespace matpower {
 
     
@@ -77,23 +100,28 @@ namespace matpower {
             mpc_var_name_ %= lexeme[char_("a-zA-Z_") >> *char_("a-zA-Z0-9_")];
             matrix_ %=  lexeme[double_ % *space % double_ >>';'];
 
-            mpc_ %= 
+            mpc_start_ %=                 
                 lit("mpc")
                 >> '.'
                 >> mpc_var_name_
                 >> '='
+                ;
+
+            mpc_matrix_ %= 
+                mpc_start_
                 >> '['
                 >> *matrix_
                 >> ']'
                 >> ';'
                 ;
 
-            mpc_data_ %= repeat(0,inf)[mpc_];
+            mpc_data_ %= repeat(0,inf)[mpc_matrix_];
 
         }
+        qi::rule<Iterator, std::string(), Skipper> mpc_start_;
         qi::rule<Iterator, std::string(), Skipper> mpc_var_name_;
         qi::rule<Iterator, Mat(), Skipper> matrix_;
-        qi::rule<Iterator, mpc_matrix(), Skipper> mpc_;
+        qi::rule<Iterator, mpc_matrix(), Skipper> mpc_matrix_;
         qi::rule<Iterator, std::vector<mpc_matrix>(), Skipper> mpc_data_;
 
     };
