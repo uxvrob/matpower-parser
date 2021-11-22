@@ -7,11 +7,13 @@
 #include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/fusion/include/io.hpp>
 
-#include<iostream>
-#include<fstream>
-#include<string>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <map>
 
 using It  = boost::spirit::istream_iterator;
+using ColumnHeaders = std::vector<std::string>;
 using Row = std::vector<double>;
 using Mat = std::vector<Row>;
 
@@ -22,21 +24,58 @@ namespace fusion = boost::fusion;
 
 namespace matpower{
 
-
-    struct mpc_matrix{
+    struct mpc_matrix {
         std::string name;
         Mat matrix;
     };
 
-    struct mpc_baseMVA{
+    struct mpc_baseMVA {
         std::string name;
         double baseMVA;
     };
 
-    struct mpc_version{
+    struct mpc_version {
         std::string name;
         std::string version;
     };
+
+    struct mpc_gen {
+        ColumnHeaders headers; //{bus Pg  Qg  Qmax    Qmin    Vg  mBase   status  Pmax    Pmin};
+        Mat data;
+    };
+
+    struct mpc_gencost {
+        // [ %   2   startup shutdown    n   c(n-1)  ... c0]
+        ColumnHeaders headers;
+        Mat data;
+    };
+    
+    struct mpc_branch {
+        ColumnHeaders headers;
+        Mat data;
+    };
+
+    /***********************************************************
+     * The data structure consists of 
+     * 
+     * mpc.version
+     * mpc.baseMVA
+     * 
+     * %% bus data
+        mpc.bus = [bus_i   type    Pd  Qd  Gs  Bs  area    Vm  Va  baseKV  zone    Vmax    Vmin]
+     * 
+           
+     * %% generator data
+        mpc.gen = [bus Pg  Qg  Qmax    Qmin    Vg  mBase   status  Pmax    Pmin]
+
+     * %% generator cost data
+        mpc.gencost = [ %   2   startup shutdown    n   c(n-1)  ... c0]
+
+     * %% branch data
+        mpc.branch = [fbus    tbus    r   x   b   rateA   rateB   rateC   ratio   angle   status  angmin  angmax]
+    
+
+    *************************************************************/
 
 
 } //matpower
@@ -47,7 +86,7 @@ BOOST_FUSION_ADAPT_STRUCT(
     (Mat, matrix)
 )
 
-/*
+
 BOOST_FUSION_ADAPT_STRUCT(
     matpower::mpc_baseMVA,
     (std::string, name)
@@ -59,7 +98,15 @@ BOOST_FUSION_ADAPT_STRUCT(
     (std::string, name)
     (std::string, version)
 )
+
+
+/*
+BOOST_FUSION_ADAPT_STRUCT(
+    matpower::mpc_data,
+    (matpower::mpc_baseMVA, baseMVA)
+)
 */
+
 namespace matpower {
 
     
@@ -106,7 +153,13 @@ namespace matpower {
                 >> mpc_var_name_
                 >> '='
                 ;
+/*
+            mpc_baseMVA_ %=
+                mpc_start_
+                >> double_
+                ;
 
+*/
             mpc_matrix_ %= 
                 mpc_start_
                 >> '['
@@ -115,11 +168,13 @@ namespace matpower {
                 >> ';'
                 ;
 
-            mpc_data_ %= repeat(0,inf)[mpc_matrix_];
+            mpc_data_ %= repeat[mpc_matrix_];
+            //mpc_data_ %= repeat[mpc_baseMVA_ / mpc_matrix_];
 
         }
         qi::rule<Iterator, std::string(), Skipper> mpc_start_;
         qi::rule<Iterator, std::string(), Skipper> mpc_var_name_;
+        qi::rule<Iterator, double, Skipper> mpc_baseMVA_;
         qi::rule<Iterator, Mat(), Skipper> matrix_;
         qi::rule<Iterator, mpc_matrix(), Skipper> mpc_matrix_;
         qi::rule<Iterator, std::vector<mpc_matrix>(), Skipper> mpc_data_;
