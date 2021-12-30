@@ -102,11 +102,31 @@ namespace matpower {
 MatpowerParser::MatpowerParser(std::string filename)
 {
 
+    this->init();
+
 	if(this->open(filename))
 	{
 		this->parse(this->case_storage);
 	}
 
+
+}
+
+void MatpowerParser::init()
+{
+
+    // Initialize mapping
+
+    s_mapMpcValues["version"] = eVersion;
+    s_mapMpcValues["baseMVA"] = eBaseMVA;
+    s_mapMpcValues["bus"] = eBus;
+    s_mapMpcValues["gen"] = eGen;
+    s_mapMpcValues["gencost"] = eGenCost;
+    s_mapMpcValues["branch"] = eBranch;
+
+      std::cout << "s_mapMpcValues contains "
+       << s_mapMpcValues.size()
+       << " entries." << std::endl;
 
 }
 
@@ -153,8 +173,16 @@ bool MatpowerParser::parse(std::string data)
 
     if (r && iter == end)
     {
-        std::cout << "Parse successful!" << std::endl;
-        return true;
+        if(parse_mpc_data(this->mpc_data))
+        { 
+            std::cout << "Parse successful!" << std::endl;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+        
         
     } 
     else {
@@ -162,6 +190,23 @@ bool MatpowerParser::parse(std::string data)
     	std::cout << "Parse unsuccessful" << std::endl;
         return false;
     }
+}
+
+/****
+ * This would be optimal if processed inside the grammar than taking another processing step.
+ * 
+ */
+bool MatpowerParser::parse_mpc_data(std::vector<matpower::mpc_matrix> mpc_data)
+{
+
+    for(auto& v: this->mpc_data)
+    {
+        // var name boost::fusion::at_c<0>(v)
+
+    }
+
+    return true;
+
 }
 
 void MatpowerParser::printData()

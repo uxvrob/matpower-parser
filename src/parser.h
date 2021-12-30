@@ -9,6 +9,8 @@
 #include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/fusion/include/io.hpp>
 
+#include <map>
+
 using ColumnHeaders = std::vector<std::string>;
 using Row = std::vector<double>;
 using Mat = std::vector<Row>;
@@ -133,12 +135,23 @@ public:
     matpower::mpc_gencost mpc_gencost;
     matpower::mpc_branch mpc_branch;
 
+    enum MpcValues { eVersion,
+                            eBaseMVA,
+                            eBus,
+                            eGen,
+                            eGenCost,
+                            eBranch};
+
+    std::map<std::string, MpcValues> s_mapMpcValues;
+
 	MatpowerParser(std::string);
 	void printData();
 
 private:
 	std::string case_storage;
 
+    void init();
 	bool open(std::string);
 	bool parse(std::string);
+    bool parse_mpc_data(std::vector<matpower::mpc_matrix>);
 };
