@@ -20,9 +20,10 @@ namespace matpower{
         Mat matrix;
     };
 
-    struct mpc_baseMVA {
-        std::string name;
-        double baseMVA;
+    struct mpc_data {
+        mpc_data(std::vector<std::string> h) : headers(h) {}
+        ColumnHeaders headers;
+        Mat data;
     };
 
     struct mpc_version {
@@ -30,21 +31,27 @@ namespace matpower{
         std::string version;
     };
 
-    struct mpc_gen {
-        ColumnHeaders headers; //{bus Pg  Qg  Qmax    Qmin    Vg  mBase   status  Pmax    Pmin};
-        Mat data;
+    struct mpc_baseMVA {
+        std::string name;
+        double baseMVA;
     };
 
-    struct mpc_gencost {
-        // [ %   2   startup shutdown    n   c(n-1)  ... c0]
-        ColumnHeaders headers;
-        Mat data;
+    struct mpc_bus : mpc_data {
+        mpc_bus() : mpc_data({"bus_i", "type", "Pd", "Qd", "Gs", "Bs", "area", "Vm", "Va", "baseKV", "zone", "Vmax", "Vmin"}) {}
     };
-    
-    struct mpc_branch {
-        ColumnHeaders headers;
-        Mat data;
+
+    struct mpc_gen : mpc_data {
+        mpc_gen() : mpc_data({"bus", "Pg", "Qg", "Qmax", "Qmin", "Vg", "mBase", "status", "Pmax", "Pmin"}) {}
     };
+
+    struct mpc_gencost : mpc_data {
+        mpc_gencost() : mpc_data({"%", "2","startup" "shutdown","n", "c(n-1)", "c0"}) {}
+    };
+
+    struct mpc_branch : mpc_data {
+        mpc_branch() : mpc_data({"fbus", "tbus", "r", "x", "b", "rateA", "rateB", "rateC", "ratio", "angle", "status", "angmin", "angmax"}) {}
+    };
+
 
     /***********************************************************
      * The data structure consists of 
@@ -77,6 +84,11 @@ BOOST_FUSION_ADAPT_STRUCT(
     (Mat, matrix)
 )
 
+BOOST_FUSION_ADAPT_STRUCT(
+    matpower::mpc_version,
+    (std::string, name)
+    (std::string, version)
+)
 
 BOOST_FUSION_ADAPT_STRUCT(
     matpower::mpc_baseMVA,
@@ -85,9 +97,27 @@ BOOST_FUSION_ADAPT_STRUCT(
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    matpower::mpc_version,
-    (std::string, name)
-    (std::string, version)
+    matpower::mpc_bus,
+    (ColumnHeaders, headers)
+    (Mat, data)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    matpower::mpc_gen,
+    (ColumnHeaders, headers)
+    (Mat, data)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    matpower::mpc_gencost,
+    (ColumnHeaders, headers)
+    (Mat, data)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    matpower::mpc_branch,
+    (ColumnHeaders, headers)
+    (Mat, data)
 )
 
 class MatpowerParser
@@ -96,6 +126,12 @@ class MatpowerParser
 
 public:
 	std::vector<matpower::mpc_matrix> mpc_data;
+    matpower::mpc_version mpc_version;
+    matpower::mpc_baseMVA mpc_baseMVA;
+    matpower::mpc_bus mpc_bus;
+    matpower::mpc_gen mpc_gen;
+    matpower::mpc_gencost mpc_gencost;
+    matpower::mpc_branch mpc_branch;
 
 	MatpowerParser(std::string);
 	void printData();
