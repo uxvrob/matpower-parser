@@ -33,18 +33,28 @@ namespace matpower {
         {
             using ascii::char_;
             using ascii::space;
+            using qi::lit;
             using qi::eol;
             using qi::eoi;
 
             // Skip single line comments -- assume no block statements
             single_line_comment_ = "%" >> *(char_ - eol) >> (eol|eoi);
-            skipper_ = space | single_line_comment_;
+
+            // Skip function = <dataset_name>
+            function_ = lit("function")
+                        >> *(char_ - eol)
+                        >> (eol|eoi);
+
+            skipper_ = space | single_line_comment_ | function_;
 
         }
-        qi::rule<Iterator> single_line_comment_, skipper_;
+        qi::rule<Iterator> single_line_comment_, function_, skipper_;
         
     };
-    
+
+    // function grammar
+    // baseMVA grammar
+    // version
 
     template <typename Iterator, typename Skipper = skip_grammar<Iterator>>
     struct matpower_grammar : qi::grammar<Iterator, std::vector<mpc_matrix>(), Skipper>
@@ -187,21 +197,37 @@ bool MatpowerParser::parse(std::string data)
     } 
     else {
 
-    	std::cout << "Parse unsuccessful" << std::endl;
+    	std::cout << "Parse unsuccessful." << std::endl;
+        for(StringIt it = iter; it < iter+30; it++)
+        {
+            std::cout << *it;
+        }
         return false;
     }
 }
 
 /****
+ * Populates mpc version, baseMVA, gen, gencost, bus and branch data structures
+ * 
  * This would be optimal if processed inside the grammar than taking another processing step.
  * 
  */
 bool MatpowerParser::parse_mpc_data(std::vector<matpower::mpc_matrix> mpc_data)
 {
 
-    for(auto& v: this->mpc_data)
+    for(auto& v: mpc_data)
     {
-        // var name boost::fusion::at_c<0>(v)
+        std::string varName = v.name;
+
+        if(s_mapMpcValues.find(varName) == s_mapMpcValues.end())
+        {
+            std::cout << varName << " not found in s_mapMpcValues" << std::endl;
+            continue;
+        }
+        else
+        {
+            std::cout << varName << " found in s_mapMpcValues" << std::endl;
+        }
 
     }
 
